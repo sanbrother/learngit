@@ -1,8 +1,10 @@
 package com.neosoft.demo.rtp;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.Date;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
@@ -12,14 +14,16 @@ import android.app.Service;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
+import android.os.Environment;
 import android.os.IBinder;
 import android.util.Log;
 
 public class RtpService extends Service {
 	private static final String TAG = "RtpService";
-	private static final long interval = 300000L;
+	private static final long interval = 5000L;
 	private boolean stopFlag = false;
-	private Thread t;
+	
+	FileLogger fileLogger = new FileLogger(Environment.getExternalStorageDirectory() + "/rtp_log.txt");
 
 	public IBinder onBind(Intent paramIntent) {
 		return null;
@@ -28,12 +32,23 @@ public class RtpService extends Service {
 	public void onCreate() {
 		Log.i(TAG, "onCreate");
 		super.onCreate();
+		
+		Log.i(TAG, Environment.getExternalStorageDirectory() + "rtp_log.txt");
+		
+		try {
+			this.fileLogger.open();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	public void onDestroy() {
 		this.stopFlag = true;
 		Log.i(TAG, "onDestroy");
 		super.onDestroy();
+		
+		this.fileLogger.close();
 	}
 
 	@Override
@@ -44,8 +59,7 @@ public class RtpService extends Service {
 		PriceHistoryDbHelper dbHelper = new PriceHistoryDbHelper(this);
 		
 		final SQLiteDatabase db = dbHelper.getWritableDatabase();
-		final SQLiteDatabase db2 = dbHelper.getReadableDatabase();
-
+		
 		Runnable rn = new Runnable() {
 			public void run() {
 				try {					
@@ -74,8 +88,10 @@ public class RtpService extends Service {
 			            cv.put(PriceHistoryDbHelper.COLUMN_PRICE_RECORD, priceRecord);
 			            
 			            db.insert(PriceHistoryDbHelper.TABLE_NAME_PRICE_HISTORY, null, cv);
+			            
+			            fileLogger.trace(new Date().toString() + " : " + priceRecord);
 						
-						Thread.sleep(5000);
+						Thread.sleep(interval);
 					}
 				} catch (Exception e) {
 					// TODO Auto-generated catch block
