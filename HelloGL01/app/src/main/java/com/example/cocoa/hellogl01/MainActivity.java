@@ -16,6 +16,6 @@ public class MainActivity extends Activity {
         // without this line, app crashes
         glv.setEGLContextClientVersion(2);
 
-        glv.setRenderer(new MyRenderer());
+        glv.setRenderer(new MyRenderer(this));
     }
 }

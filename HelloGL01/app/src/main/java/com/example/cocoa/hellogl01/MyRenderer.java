@@ -1,8 +1,13 @@
 package com.example.cocoa.hellogl01;
 
+import android.content.Context;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
+import android.opengl.Matrix;
 import android.util.Log;
+
+import com.learnopengles.android.common.RawResourceReader;
+import com.learnopengles.android.common.ShaderHelper;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -16,17 +21,61 @@ import javax.microedition.khronos.opengles.GL10;
  */
 
 public class MyRenderer implements GLSurfaceView.Renderer {
+    private final Context context;
     private static final int BYTES_PER_FLOAT = 4;
     public static final String TAG = "MyRenderer";
+    private float[] mViewMatrix = new float[16];
 
-    @Override
-    public void onSurfaceCreated(GL10 gl10, EGLConfig eglConfig) {
-        initVBO();
+    public MyRenderer(Context context) {
+        this.context = context;
     }
 
     @Override
-    public void onSurfaceChanged(GL10 gl10, int i, int i1) {
+    public void onSurfaceCreated(GL10 gl10, EGLConfig eglConfig) {
+        // Set the background frame color
+        GLES20.glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 
+        // Position the eye behind the origin.
+        final float eyeX = 0.0f;
+        final float eyeY = 0.0f;
+        final float eyeZ = 1.5f;
+
+        // We are looking toward the distance
+        final float lookX = 0.0f;
+        final float lookY = 0.0f;
+        final float lookZ = -5.0f;
+
+        // Set our up vector. This is where our head would be pointing were we holding the camera.
+        final float upX = 0.0f;
+        final float upY = 1.0f;
+        final float upZ = 0.0f;
+
+        // Set the view matrix. This matrix can be said to represent the camera position.
+        // NOTE: In OpenGL 1, a ModelView matrix is used, which is a combination of a model and
+        // view matrix. In OpenGL 2, we can keep track of these matrices separately if we choose.
+        Matrix.setLookAtM(mViewMatrix, 0, eyeX, eyeY, eyeZ, lookX, lookY, lookZ, upX, upY, upZ);
+
+        initVBO();
+    }
+
+    private float[] mProjectionMatrix = new float[16];
+
+    @Override
+    public void onSurfaceChanged(GL10 gl10, int width, int height) {
+// Set the OpenGL viewport to the same size as the surface.
+        GLES20.glViewport(0, 0, width, height);
+
+        // Create a new perspective projection matrix. The height will stay the same
+        // while the width will vary as per aspect ratio.
+        final float ratio = (float) width / height;
+        final float left = -ratio;
+        final float right = ratio;
+        final float bottom = -1.0f;
+        final float top = 1.0f;
+        final float near = 1.0f;
+        final float far = 10.0f;
+
+        Matrix.frustumM(mProjectionMatrix, 0, left, right, bottom, top, near, far);
     }
 
     @Override
@@ -35,12 +84,10 @@ public class MyRenderer implements GLSurfaceView.Renderer {
     }
 
     private int mCubePositionsBufferIdx;
+    private int mCubeColorsBufferIdx;
 
     private void initVBO()
     {
-        // Set the background frame color
-        GLES20.glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-
         // Java array.
         float[] cubePositions = new float[] { 0.0f, 0.8f, -0.8f, -0.8f, 0.8f, -0.8f };
 
@@ -75,42 +122,68 @@ public class MyRenderer implements GLSurfaceView.Renderer {
 
 
 
+        // Java array.
+        float[] cubeColors = new float[] {
+                1.0f, 0.0f, 0.0f, 1.0f,
+                0.0f, 1.0f, 0.0f, 1.0f,
+                0.0f, 0.0f, 1.0f, 1.0f
+        };
 
-        int vertexShader = MyRenderer.compileShader(GLES20.GL_VERTEX_SHADER, vertexShaderCode);
-        int fragmentShader = MyRenderer.compileShader(GLES20.GL_FRAGMENT_SHADER, fragmentShaderCode);
+        // Floating-point buffer
+        final FloatBuffer cubeColorsBuffer;
+
+        // Allocate a direct block of memory on the native heap,
+        // size in bytes is equal to cubePositions.length * BYTES_PER_FLOAT.
+        // BYTES_PER_FLOAT is equal to 4, since a float is 32-bits, or 4 bytes.
+        cubeColorsBuffer = ByteBuffer.allocateDirect(cubeColors.length * BYTES_PER_FLOAT)
+
+        // Floats can be in big-endian or little-endian order.
+        // We want the same as the native platform.
+        .order(ByteOrder.nativeOrder())
+
+        // Give us a floating-point view on this byte buffer.
+        .asFloatBuffer();
+
+        // Copy data from the Java heap to the native heap.
+        cubeColorsBuffer.put(cubeColors)
+
+        // Reset the buffer position to the beginning of the buffer.
+        .position(0);
+
+        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, buffers[1]);
+        GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, cubeColorsBuffer.capacity() * BYTES_PER_FLOAT, cubeColorsBuffer, GLES20.GL_STATIC_DRAW);
+
+        mCubeColorsBufferIdx = buffers[1];
+
+
+
+        final String vertexShader = RawResourceReader.readTextFileFromRawResource(this.context, R.raw.simple_vertex_shader);
+        final String fragmentShader = RawResourceReader.readTextFileFromRawResource(this.context, R.raw.simple_fragment_shader);
+
+        final int vertexShaderHandle = ShaderHelper.compileShader(GLES20.GL_VERTEX_SHADER, vertexShader);
+        final int fragmentShaderHandle = ShaderHelper.compileShader(GLES20.GL_FRAGMENT_SHADER, fragmentShader);
 
         // create empty OpenGL ES Program
         mProgram = GLES20.glCreateProgram();
 
         // add the vertex shader to program
-        GLES20.glAttachShader(mProgram, vertexShader);
+        GLES20.glAttachShader(mProgram, vertexShaderHandle);
 
         // add the fragment shader to program
-        GLES20.glAttachShader(mProgram, fragmentShader);
+        GLES20.glAttachShader(mProgram, fragmentShaderHandle);
 
         // creates OpenGL ES program executables
         GLES20.glLinkProgram(mProgram);
 
         // get handle to vertex shader's vPosition member
         mPositionHandle = GLES20.glGetAttribLocation(mProgram, "vPosition");
+
+        mColorHandle = GLES20.glGetAttribLocation(mProgram, "vColor");
     }
-
-    private final String vertexShaderCode =
-            "attribute vec2 vPosition;" +
-                    "void main() {" +
-                    "  gl_Position = vec4(vPosition, 0.0, 1.0);" +
-                    "}";
-
-    private final String fragmentShaderCode =
-            "precision mediump float;" +
-                    "uniform vec4 vColor;" +
-                    "void main() {" +
-                     "  gl_FragColor = vColor;" +
-                     "  gl_FragColor[0] = 1.0;" +
-                    "}";
 
     private int mProgram;
     private int mPositionHandle;
+    private int mColorHandle;
 
     float color[] = { 0.63671875f, 0.76953125f, 0.22265625f, 1.0f };
 
@@ -122,9 +195,6 @@ public class MyRenderer implements GLSurfaceView.Renderer {
         // Add program to OpenGL ES environment
         GLES20.glUseProgram(mProgram);
 
-        // get handle to vertex shader's vPosition member
-        mPositionHandle = GLES20.glGetAttribLocation(mProgram, "vPosition");
-
         // Pass in the position information
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mCubePositionsBufferIdx);
         GLES20.glEnableVertexAttribArray(mPositionHandle);
@@ -135,6 +205,13 @@ public class MyRenderer implements GLSurfaceView.Renderer {
 
         // Set color for drawing the triangle
         // GLES20.glUniform4fv(mColorHandle, 1, color, 0);
+
+
+        // Pass in the position information
+        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mCubeColorsBufferIdx);
+        GLES20.glEnableVertexAttribArray(mColorHandle);
+        GLES20.glVertexAttribPointer(mColorHandle, 4, GLES20.GL_FLOAT, false, 0, 0);
+
 
         // Draw the triangle
         GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, /* vertexCount */ 3);
