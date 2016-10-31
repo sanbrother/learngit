@@ -8,6 +8,7 @@ import android.util.Log;
 
 import com.learnopengles.android.common.RawResourceReader;
 import com.learnopengles.android.common.ShaderHelper;
+import com.learnopengles.android.common.TextureHelper;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -24,6 +25,9 @@ public class MyRenderer implements GLSurfaceView.Renderer {
     private final Context context;
     private static final int BYTES_PER_FLOAT = 4;
     public static final String TAG = "MyRenderer";
+
+    /** These are handles to our texture data. */
+    private int mAndroidDataHandle;
 
     /**
      * Store the model matrix. This matrix is used to move models from object space (where each model can be thought
@@ -73,6 +77,16 @@ public class MyRenderer implements GLSurfaceView.Renderer {
         Matrix.setLookAtM(mViewMatrix, 0, eyeX, eyeY, eyeZ, lookX, lookY, lookZ, upX, upY, upZ);
 
         initVBO();
+
+        // Load the texture
+        mAndroidDataHandle = TextureHelper.loadTexture(this.context, R.drawable.cocoa);
+        GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D);
+
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mAndroidDataHandle);
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
+
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mAndroidDataHandle);
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR_MIPMAP_LINEAR);
     }
 
     @Override
@@ -100,6 +114,7 @@ public class MyRenderer implements GLSurfaceView.Renderer {
 
     private int mCubePositionsBufferIdx;
     private int mCubeColorsBufferIdx;
+    private int mCubeTexCoordsBufferIdx;
 
     private void initVBO()
     {
@@ -127,7 +142,7 @@ public class MyRenderer implements GLSurfaceView.Renderer {
         // Reset the buffer position to the beginning of the buffer.
         .position(0);
 
-        final int buffers[] = new int[2];
+        final int buffers[] = new int[3];
         GLES20.glGenBuffers(buffers.length, buffers, 0);
 
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, buffers[0]);
@@ -172,6 +187,49 @@ public class MyRenderer implements GLSurfaceView.Renderer {
 
 
 
+
+
+
+
+        // Java array.
+        float[] cubeTexCoords = new float[] {
+                // front
+                0.0f, 0.0f,
+                1.0f, 0.0f,
+                1.0f, 1.0f,
+                0.0f, 1.0f,
+        };
+
+        // Floating-point buffer
+        final FloatBuffer cubeTexCoordsBuffer;
+
+        // Allocate a direct block of memory on the native heap,
+        // size in bytes is equal to cubePositions.length * BYTES_PER_FLOAT.
+        // BYTES_PER_FLOAT is equal to 4, since a float is 32-bits, or 4 bytes.
+        cubeTexCoordsBuffer = ByteBuffer.allocateDirect(cubeTexCoords.length * BYTES_PER_FLOAT)
+
+                // Floats can be in big-endian or little-endian order.
+                // We want the same as the native platform.
+                .order(ByteOrder.nativeOrder())
+
+                // Give us a floating-point view on this byte buffer.
+                .asFloatBuffer();
+
+        // Copy data from the Java heap to the native heap.
+        cubeTexCoordsBuffer.put(cubeTexCoords)
+
+                // Reset the buffer position to the beginning of the buffer.
+                .position(0);
+
+        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, buffers[2]);
+        GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, cubeTexCoordsBuffer.capacity() * BYTES_PER_FLOAT, cubeTexCoordsBuffer, GLES20.GL_STATIC_DRAW);
+
+        mCubeTexCoordsBufferIdx = buffers[2];
+
+
+
+
+
         final String vertexShader = RawResourceReader.readTextFileFromRawResource(this.context, R.raw.simple_vertex_shader);
         final String fragmentShader = RawResourceReader.readTextFileFromRawResource(this.context, R.raw.simple_fragment_shader);
 
@@ -209,6 +267,26 @@ public class MyRenderer implements GLSurfaceView.Renderer {
 
         // Add program to OpenGL ES environment
         GLES20.glUseProgram(mProgram);
+
+
+        int mTextureUniformHandle = GLES20.glGetUniformLocation(mProgram, "u_Texture");
+        int mTextureCoordinateHandle = GLES20.glGetAttribLocation(mProgram, "a_TexCoordinate");
+
+        // Pass in the texture information
+        GLES20.glEnableVertexAttribArray(mTextureCoordinateHandle);
+        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mCubePositionsBufferIdx);
+        GLES20.glVertexAttribPointer(mTextureCoordinateHandle, 2, GLES20.GL_FLOAT, false, 0, 0);
+
+        // Pass in the texture information
+        // Set the active texture unit to texture unit 0.
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+
+        // Bind the texture to this unit.
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mAndroidDataHandle);
+
+        // Tell the texture uniform sampler to use this texture in the
+        // shader by binding to texture unit 0.
+        GLES20.glUniform1i(mTextureUniformHandle, 0);
 
         Matrix.setIdentityM(mModelMatrix, 0);
         // Matrix.translateM(mModelMatrix, 0, 0.0f, 0.0f, -1.0f);
