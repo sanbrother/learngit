@@ -24,7 +24,24 @@ public class MyRenderer implements GLSurfaceView.Renderer {
     private final Context context;
     private static final int BYTES_PER_FLOAT = 4;
     public static final String TAG = "MyRenderer";
+
+    /**
+     * Store the model matrix. This matrix is used to move models from object space (where each model can be thought
+     * of being located at the center of the universe) to world space.
+     */
+    private float[] mModelMatrix = new float[16];
+
+    /**
+     * Store the view matrix. This can be thought of as our camera. This matrix transforms world space to eye space;
+     * it positions things relative to our eye.
+     */
     private float[] mViewMatrix = new float[16];
+
+    /** Store the projection matrix. This is used to project the scene onto a 2D viewport. */
+    private float[] mProjectionMatrix = new float[16];
+
+    /** Allocate storage for the final combined matrix. This will be passed into the shader program. */
+    private float[] mMVPMatrix = new float[16];
 
     public MyRenderer(Context context) {
         this.context = context;
@@ -58,11 +75,9 @@ public class MyRenderer implements GLSurfaceView.Renderer {
         initVBO();
     }
 
-    private float[] mProjectionMatrix = new float[16];
-
     @Override
     public void onSurfaceChanged(GL10 gl10, int width, int height) {
-// Set the OpenGL viewport to the same size as the surface.
+        // Set the OpenGL viewport to the same size as the surface.
         GLES20.glViewport(0, 0, width, height);
 
         // Create a new perspective projection matrix. The height will stay the same
@@ -190,10 +205,26 @@ public class MyRenderer implements GLSurfaceView.Renderer {
     private void drawVBO()
     {
         // Redraw background color
-        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
+        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
 
         // Add program to OpenGL ES environment
         GLES20.glUseProgram(mProgram);
+
+        Matrix.setIdentityM(mModelMatrix, 0);
+        // Matrix.translateM(mModelMatrix, 0, 0.0f, 0.0f, -1.0f);
+
+        // This multiplies the view matrix by the model matrix, and stores
+        // the result in the MVP matrix
+        // (which currently contains model * view).
+        Matrix.multiplyMM(mMVPMatrix, 0, mViewMatrix, 0, mModelMatrix, 0);
+        Matrix.multiplyMM(mMVPMatrix, 0, mProjectionMatrix, 0, mMVPMatrix, 0);
+        // Matrix.multiplyMM(mMVPMatrix, 0, mProjectionMatrix, 0, mViewMatrix, 0);
+        // Matrix.setIdentityM(mMVPMatrix, 0);
+
+        int mMVPMatrixHandle = GLES20.glGetUniformLocation(mProgram, "u_MVPMatrix");
+
+        // Pass in the combined matrix.
+        GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMVPMatrix, 0);
 
         // Pass in the position information
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mCubePositionsBufferIdx);
@@ -218,6 +249,8 @@ public class MyRenderer implements GLSurfaceView.Renderer {
 
         // Disable vertex array
         GLES20.glDisableVertexAttribArray(mPositionHandle);
+        // Disable color array
+        GLES20.glDisableVertexAttribArray(mColorHandle);
     }
 
     public static int loadShader(int type, String shaderCode) {
