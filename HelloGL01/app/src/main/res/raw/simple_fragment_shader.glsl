@@ -7,5 +7,6 @@ varying vec2 v_TexCoordinate;   // Interpolated texture coordinate per fragment.
 
 void main() {
     // gl_FragColor = fColor;
-    gl_FragColor = texture2D(u_Texture, v_TexCoordinate);
+    vec2 flipped_texcoord = vec2(v_TexCoordinate.x, 1.0 - v_TexCoordinate.y);
+    gl_FragColor = texture2D(u_Texture, flipped_texcoord);
 }
