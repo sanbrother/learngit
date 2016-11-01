@@ -122,7 +122,7 @@ public class MyRenderer implements GLSurfaceView.Renderer {
     private void initVBO()
     {
         // Java array.
-        float[] cubePositions = new float[] { 0.0f, 0.8f, -0.8f, -0.8f, 0.8f, -0.8f };
+        float[] cubePositions = new float[] { -0.8f, 0.8f, -0.8f, -0.8f, 0.8f, -0.8f };
 
         // Floating-point buffer
         final FloatBuffer cubePositionsBuffer;
@@ -197,7 +197,7 @@ public class MyRenderer implements GLSurfaceView.Renderer {
         // Java array.
         float[] cubeTexCoords = new float[] {
                 // front
-                0.5f, 1.0f,
+                0.0f, 1.0f,
                 0.0f, 0.0f,
                 1.0f, 0.0f,
         };
