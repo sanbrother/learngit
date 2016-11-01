@@ -13,6 +13,7 @@ import com.learnopengles.android.common.TextureHelper;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
+import java.nio.ShortBuffer;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
@@ -118,6 +119,7 @@ public class MyRenderer implements GLSurfaceView.Renderer {
     private int mCubePositionsBufferIdx;
     private int mCubeColorsBufferIdx;
     private int mCubeTexCoordsBufferIdx;
+    private int mCubePositionIndexBufferIdx;
 
     private void initVBO()
     {
@@ -152,7 +154,7 @@ public class MyRenderer implements GLSurfaceView.Renderer {
         // Reset the buffer position to the beginning of the buffer.
         .position(0);
 
-        final int buffers[] = new int[3];
+        final int buffers[] = new int[4];
         GLES20.glGenBuffers(buffers.length, buffers, 0);
 
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, buffers[0]);
@@ -235,6 +237,42 @@ public class MyRenderer implements GLSurfaceView.Renderer {
         GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, cubeTexCoordsBuffer.capacity() * BYTES_PER_FLOAT, cubeTexCoordsBuffer, GLES20.GL_STATIC_DRAW);
 
         mCubeTexCoordsBufferIdx = buffers[2];
+
+
+
+
+
+
+        // Java array.
+        short[] indices = new short[] {
+                0, 1, 2, 3
+        };
+
+        // Floating-point buffer
+        final ShortBuffer indicesBuffer;
+
+        // Allocate a direct block of memory on the native heap,
+        // size in bytes is equal to cubePositions.length * BYTES_PER_FLOAT.
+        // BYTES_PER_FLOAT is equal to 4, since a float is 32-bits, or 4 bytes.
+        indicesBuffer = ByteBuffer.allocateDirect(indices.length * 2)
+
+                // Floats can be in big-endian or little-endian order.
+                // We want the same as the native platform.
+                .order(ByteOrder.nativeOrder())
+
+                // Give us a floating-point view on this byte buffer.
+                .asShortBuffer();
+
+        // Copy data from the Java heap to the native heap.
+        indicesBuffer.put(indices)
+
+                // Reset the buffer position to the beginning of the buffer.
+                .position(0);
+
+        GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, buffers[3]);
+        GLES20.glBufferData(GLES20.GL_ELEMENT_ARRAY_BUFFER, indicesBuffer.capacity() * 2, indicesBuffer, GLES20.GL_STATIC_DRAW);
+
+        mCubePositionIndexBufferIdx = buffers[3];
 
 
 
@@ -331,9 +369,11 @@ public class MyRenderer implements GLSurfaceView.Renderer {
         GLES20.glEnableVertexAttribArray(mColorHandle);
         GLES20.glVertexAttribPointer(mColorHandle, 4, GLES20.GL_FLOAT, false, 0, 0);
 
+        GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, mCubePositionIndexBufferIdx);
+        GLES20.glDrawElements(GLES20.GL_TRIANGLE_STRIP, 4, GLES20.GL_UNSIGNED_SHORT, 0);
 
         // Draw the triangle
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, /* vertexCount */ 4);
+        // GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, /* vertexCount */ 4);
 
         // Disable vertex array
         GLES20.glDisableVertexAttribArray(mPositionHandle);
