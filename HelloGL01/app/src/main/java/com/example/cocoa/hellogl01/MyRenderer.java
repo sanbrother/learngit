@@ -122,7 +122,14 @@ public class MyRenderer implements GLSurfaceView.Renderer {
     private void initVBO()
     {
         // Java array.
-        float[] cubePositions = new float[] { -0.8f, 0.8f, -0.8f, -0.8f, 0.8f, -0.8f };
+        // float[] cubePositions = new float[] { -0.8f, 0.8f, -0.8f, -0.8f, 0.8f, -0.8f };
+
+        float cubePositions[] = {
+                -0.8f, -0.8f,          // V1 - bottom left
+                -0.8f,  0.8f,          // V2 - top left
+                0.8f, -0.8f,          // V3 - bottom right
+                0.8f,  0.8f,           // V4 - top right
+        };
 
         // Floating-point buffer
         final FloatBuffer cubePositionsBuffer;
@@ -197,9 +204,10 @@ public class MyRenderer implements GLSurfaceView.Renderer {
         // Java array.
         float[] cubeTexCoords = new float[] {
                 // front
-                0.0f, 1.0f,
                 0.0f, 0.0f,
+                0.0f, 1.0f,
                 1.0f, 0.0f,
+                1.0f, 1.0f,
         };
 
         // Floating-point buffer
@@ -325,7 +333,7 @@ public class MyRenderer implements GLSurfaceView.Renderer {
 
 
         // Draw the triangle
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, /* vertexCount */ 3);
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, /* vertexCount */ 4);
 
         // Disable vertex array
         GLES20.glDisableVertexAttribArray(mPositionHandle);
