@@ -87,6 +87,9 @@ public class MyRenderer implements GLSurfaceView.Renderer {
 
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mAndroidDataHandle);
         GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR_MIPMAP_LINEAR);
+
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
     }
 
     @Override
@@ -194,10 +197,9 @@ public class MyRenderer implements GLSurfaceView.Renderer {
         // Java array.
         float[] cubeTexCoords = new float[] {
                 // front
+                0.5f, 1.0f,
                 0.0f, 0.0f,
                 1.0f, 0.0f,
-                1.0f, 1.0f,
-                0.0f, 1.0f,
         };
 
         // Floating-point buffer
@@ -273,8 +275,8 @@ public class MyRenderer implements GLSurfaceView.Renderer {
         int mTextureCoordinateHandle = GLES20.glGetAttribLocation(mProgram, "a_TexCoordinate");
 
         // Pass in the texture information
+        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mCubeTexCoordsBufferIdx);
         GLES20.glEnableVertexAttribArray(mTextureCoordinateHandle);
-        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mCubePositionsBufferIdx);
         GLES20.glVertexAttribPointer(mTextureCoordinateHandle, 2, GLES20.GL_FLOAT, false, 0, 0);
 
         // Pass in the texture information
