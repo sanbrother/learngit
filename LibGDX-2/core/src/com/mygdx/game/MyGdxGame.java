@@ -8,10 +8,13 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector3;
@@ -29,15 +32,23 @@ public class MyGdxGame extends ApplicationAdapter {
 	private Sound dropSound;
 	private Music rainMusic;
 
+	private final static int SCREEN_WIDTH = 1920 / 2;
+	private final static int SCREEN_HEIGHT = 1080 / 2;
+
+	public BitmapFont font;
+
 	@Override
 	public void create () {
 		// load the images for the droplet and the bucket, 64x64 pixels each
 		dropImage = new Texture(Gdx.files.internal("droplet.png"));
 		bucketImage = new Texture(Gdx.files.internal("bucket.png"));
 
+		//Use LibGDX's default Arial font.
+		font = new BitmapFont();
+
 		// load the drop sound effect and the rain background "music"
 		dropSound = Gdx.audio.newSound(Gdx.files.internal("drop.wav"));
-		rainMusic = Gdx.audio.newMusic(Gdx.files.internal("music_10.mp3"));
+		rainMusic = Gdx.audio.newMusic(Gdx.files.internal("rain.mp3"));
 
 		// start the playback of the background music immediately
 		rainMusic.setLooping(true);
@@ -46,12 +57,12 @@ public class MyGdxGame extends ApplicationAdapter {
 
 		// create the camera and the SpriteBatch
 		camera = new OrthographicCamera();
-		camera.setToOrtho(false, 800, 480);
+		camera.setToOrtho(false, SCREEN_WIDTH, SCREEN_HEIGHT);
 		batch = new SpriteBatch();
 
 		// create a Rectangle to logically represent the bucket
 		bucket = new Rectangle();
-		bucket.x = 800 / 2 - 64 / 2; // center the bucket horizontally
+		bucket.x = SCREEN_WIDTH / 2 - 64 / 2; // center the bucket horizontally
 		bucket.y = 20; // bottom left corner of the bucket is 20 pixels above the bottom screen edge
 		bucket.width = 64;
 		bucket.height = 64;
@@ -63,8 +74,8 @@ public class MyGdxGame extends ApplicationAdapter {
 
 	private void spawnRaindrop() {
 		Rectangle raindrop = new Rectangle();
-		raindrop.x = MathUtils.random(0, 800 - 64);
-		raindrop.y = 480;
+		raindrop.x = MathUtils.random(0, SCREEN_WIDTH - 64);
+		raindrop.y = SCREEN_HEIGHT;
 		raindrop.width = 64;
 		raindrop.height = 64;
 		raindrops.add(raindrop);
@@ -94,6 +105,10 @@ public class MyGdxGame extends ApplicationAdapter {
 		for(Rectangle raindrop: raindrops) {
 			batch.draw(dropImage, raindrop.x, raindrop.y);
 		}
+
+		font.draw(batch, "Welcome to Drop!!! ", 100, 150);
+		font.draw(batch, "Tap anywhere to begin!", 100, 100);
+
 		batch.end();
 
 		// process user input
@@ -108,7 +123,7 @@ public class MyGdxGame extends ApplicationAdapter {
 
 		// make sure the bucket stays within the screen bounds
 		if(bucket.x < 0) bucket.x = 0;
-		if(bucket.x > 800 - 64) bucket.x = 800 - 64;
+		if(bucket.x > SCREEN_WIDTH - 64) bucket.x = SCREEN_WIDTH - 64;
 
 		// check if we need to create a new raindrop
 		if(TimeUtils.nanoTime() - lastDropTime > 1000000000) spawnRaindrop();
